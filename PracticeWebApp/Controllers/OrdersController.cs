@@ -11,21 +11,21 @@ namespace PracticeWebApp.Controllers
         private readonly DataContext _context;
 
         public OrdersController(DataContext context)
-        { 
+        {
             _context = context;
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Order>> GetOrders()
+        public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
         {
-            var orders = _context.Orders.ToList();
+            var orders = await _context.Orders.ToListAsync();
             return Ok(orders);
         }
 
         [HttpGet("{id}")]
-        public ActionResult<Order> GetOrder(int id)
+        public async Task<ActionResult<Order>> GetOrder(int id)
         {
-            var order = _context.Orders.Find(id);
+            var order = await _context.Orders.FindAsync(id);
 
             if (order == null)
             {
@@ -36,16 +36,16 @@ namespace PracticeWebApp.Controllers
         }
 
         [HttpPost]
-        public ActionResult<Order> CreateOrder(Order order)
+        public async Task<ActionResult<Order>> CreateOrder(Order order)
         {
             _context.Orders.Add(order);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateOrder(int id, Order order)
+        public async Task<IActionResult> UpdateOrder(int id, Order order)
         {
             if (id != order.Id)
             {
@@ -53,15 +53,15 @@ namespace PracticeWebApp.Controllers
             }
 
             _context.Entry(order).State = EntityState.Modified;
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteOrder(int id)
+        public async Task<IActionResult> DeleteOrder(int id)
         {
-            var order = _context.Orders.Find(id);
+            var order = await _context.Orders.FindAsync(id);
 
             if (order == null)
             {
@@ -69,7 +69,7 @@ namespace PracticeWebApp.Controllers
             }
 
             _context.Orders.Remove(order);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }

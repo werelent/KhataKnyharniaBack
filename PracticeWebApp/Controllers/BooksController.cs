@@ -16,16 +16,16 @@ namespace PracticeWebApp.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Book>> GetBooks()
+        public async Task<ActionResult<IEnumerable<Book>>> GetBooks()
         {
-            var books = _context.Books.ToList();
+            var books = await _context.Books.ToListAsync();
             return Ok(books);
         }
 
-        [HttpGet("id")]
-        public ActionResult<Book> GetBook(int id)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Book>> GetBook(int id)
         {
-            var book = _context.Books.Find(id);
+            var book = await _context.Books.FindAsync(id);
 
             if (book == null)
             {
@@ -36,16 +36,16 @@ namespace PracticeWebApp.Controllers
         }
 
         [HttpPost]
-        public ActionResult<Book> CreateBook(Book book)
+        public async Task<ActionResult<Book>> CreateBook(Book book)
         {
             _context.Books.Add(book);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetBook), new { id = book.Id }, book);
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateBook(int id, Book book)
+        public async Task<IActionResult> UpdateBook(int id, Book book)
         {
             if (id != book.Id)
             {
@@ -53,15 +53,15 @@ namespace PracticeWebApp.Controllers
             }
 
             _context.Entry(book).State = EntityState.Modified;
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteBook(int id)
+        public async Task<IActionResult> DeleteBook(int id)
         {
-            var book = _context.Books.Find(id);
+            var book = await _context.Books.FindAsync(id);
 
             if (book == null)
             {
@@ -69,7 +69,7 @@ namespace PracticeWebApp.Controllers
             }
 
             _context.Books.Remove(book);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
