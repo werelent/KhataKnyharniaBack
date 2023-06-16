@@ -14,7 +14,7 @@ namespace PracticeWebApp.Models
         public DateTime OrderDate { get; set; }
 
         [Required]
-        public List<Book> Books { get; set; }
+        public List<int> BookIds { get; set; }
 
         [Required]
         [Range(0, double.MaxValue)]
