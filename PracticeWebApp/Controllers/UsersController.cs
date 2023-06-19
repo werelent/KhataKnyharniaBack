@@ -1,6 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PracticeWebApp.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.IdentityModel.Tokens;
 
 namespace PracticeWebApp.Controllers
 {
@@ -8,70 +14,107 @@ namespace PracticeWebApp.Controllers
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
+        private readonly IConfiguration _configuration;
+        private readonly UserManager<User> _userManager;
+        private readonly SignInManager<User> _signInManager;
         private readonly DataContext _context;
+        private readonly string _jwtSecretKey;
+        private readonly string _jwtIssuer;
 
-        public UsersController(DataContext context)
+        public UsersController(UserManager<User> userManager, SignInManager<User> signInManager, DataContext context, IConfiguration configuration)
         {
+            _userManager = userManager;
+            _signInManager = signInManager;
             _context = context;
+            _configuration = configuration;
+            _jwtSecretKey = _configuration.GetValue<string>("JwtSettings:SecretKey");
+            _jwtIssuer = _configuration.GetValue<string>("JwtSettings:Issuer");
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        [HttpPost("register")]
+        public async Task<ActionResult<User>> Register([FromBody] UserRegistrationDto model)
         {
-            var users = await _context.Users.ToListAsync();
-            return Ok(users);
+            try
+            {
+                var user = new User { UserName = model.Email, Email = model.Email };
+
+                var result = await _userManager.CreateAsync(user, model.Password);
+
+                if (!result.Succeeded)
+                {
+                    var errors = result.Errors.Select(e => e.Description);
+                    return BadRequest(new { Message = "Registration failed", Errors = errors });
+                }
+
+                await _signInManager.SignInAsync(user, isPersistent: false);
+
+                var token = GenerateJwtToken(user);
+
+                return Ok(new { Token = token });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace); // Print the stack trace to the console
+                return null;
+            }
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<User>> GetUser(string id)
+        [HttpPost("login")]
+        public async Task<ActionResult<User>> Login([FromBody] UserLoginDto model)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _userManager.FindByEmailAsync(model.Email);
 
             if (user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
 
-            return Ok(user);
-        }
+            var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
 
-        [HttpPost]
-        public async Task<ActionResult<User>> CreateUser(User user)
-        {
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUser(string id, User user)
-        {
-            if (id != user.Id)
+            if (!result.Succeeded)
             {
-                return BadRequest();
+                return Unauthorized();
             }
 
-            _context.Entry(user).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            var token = GenerateJwtToken(user);
 
-            return NoContent();
+            return Ok(new { Token = token });
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser(string id)
+        private string GenerateJwtToken(User user)
         {
-            var user = await _context.Users.FindAsync(id);
-
             if (user == null)
             {
-                return NotFound();
+                throw new ArgumentNullException(nameof(user), "User cannot be null");
             }
 
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_jwtSecretKey);
 
-            return NoContent();
+            try
+            {
+                var tokenDescriptor = new SecurityTokenDescriptor
+                {
+                    Subject = new ClaimsIdentity(new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, user.Id?.ToString() ?? string.Empty),
+                        new Claim(ClaimTypes.Name, user.UserName),
+                        new Claim(ClaimTypes.Email, user.Email)
+                    }),
+                    Expires = DateTime.UtcNow.AddDays(7),
+                    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                    Issuer = _jwtIssuer
+                };
+                var token = tokenHandler.CreateToken(tokenDescriptor);
+                return tokenHandler.WriteToken(token);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw;
+            }
         }
     }
 }

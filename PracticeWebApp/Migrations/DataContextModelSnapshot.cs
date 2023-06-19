@@ -188,7 +188,7 @@ namespace PracticeWebApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Books");
+                    b.ToTable("Books", (string)null);
                 });
 
             modelBuilder.Entity("PracticeWebApp.Models.Order", b =>
@@ -215,7 +215,7 @@ namespace PracticeWebApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("PracticeWebApp.Models.User", b =>
