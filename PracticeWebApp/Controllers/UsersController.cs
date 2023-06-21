@@ -7,6 +7,8 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authorization;
+using System.Data;
 
 namespace PracticeWebApp.Controllers
 {
@@ -36,7 +38,7 @@ namespace PracticeWebApp.Controllers
         {
             try
             {
-                var user = new User { UserName = model.Email, Email = model.Email };
+                var user = new User { UserName = model.Email, Email = model.Email, Role = "UserRole" };
 
                 var result = await _userManager.CreateAsync(user, model.Password);
 
@@ -55,7 +57,9 @@ namespace PracticeWebApp.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace); // Print the stack trace to the console
+                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine(ex.InnerException?.Message);
+                Console.WriteLine(ex.InnerException?.StackTrace);
                 return null;
             }
         }
@@ -78,8 +82,41 @@ namespace PracticeWebApp.Controllers
             }
 
             var token = GenerateJwtToken(user);
-
             return Ok(new { Token = token });
+        }
+
+        [Authorize(Roles = "AdminRole")]
+        [HttpPost("admin")]
+        public IActionResult AdminAction()
+        {
+            // Validate the JWT token
+            var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jwtSecretKey = _configuration["JwtSettings:SecretKey"];
+
+            try
+            {
+                tokenHandler.ValidateToken(token, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+                    ValidateIssuer = true,
+                    ValidIssuer = _jwtIssuer,
+                    ValidateAudience = false, // If the token doesn't have an audience claim
+                                              // Additional validation options like validating the token expiration can be set here
+                }, out var validatedToken);
+
+                // Token is valid, continue with the admin action
+                Console.WriteLine("Admin action successful.");
+                return Ok(new { message = "Admin action successful." });
+            }
+            catch (Exception ex)
+            {
+                // Token validation failed
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                return Unauthorized();
+            }
         }
 
         private string GenerateJwtToken(User user)
@@ -100,18 +137,25 @@ namespace PracticeWebApp.Controllers
                     {
                         new Claim(ClaimTypes.NameIdentifier, user.Id?.ToString() ?? string.Empty),
                         new Claim(ClaimTypes.Name, user.UserName),
-                        new Claim(ClaimTypes.Email, user.Email)
+                        new Claim(ClaimTypes.Email, user.Email),
+                        new Claim(ClaimTypes.Role, user.Role)
                     }),
                     Expires = DateTime.UtcNow.AddDays(7),
                     SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
                     Issuer = _jwtIssuer
                 };
+
+
                 var token = tokenHandler.CreateToken(tokenDescriptor);
-                return tokenHandler.WriteToken(token);
+                var tokenString = tokenHandler.WriteToken(token);
+
+                Console.WriteLine("Token generated successfully: " + tokenString);
+
+                return tokenString;
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine("Error generating token: " + ex.Message);
                 Console.WriteLine(ex.StackTrace);
                 throw;
             }
