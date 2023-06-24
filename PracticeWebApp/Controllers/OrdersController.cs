@@ -38,6 +38,16 @@ namespace PracticeWebApp.Controllers
         [HttpPost]
         public async Task<ActionResult<Order>> CreateOrder(Order order)
         {
+            // Assign the current date to the OrderDate property
+            order.OrderDate = DateTime.Now;
+
+            // Perform any necessary validations
+            if (string.IsNullOrEmpty(order.Name) || string.IsNullOrEmpty(order.Email) || string.IsNullOrEmpty(order.Address))
+            {
+                return BadRequest("Name, Email, and Address are required.");
+            }
+
+            // Save the order to the database
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
 

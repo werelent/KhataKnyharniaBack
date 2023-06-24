@@ -82,7 +82,28 @@ namespace PracticeWebApp.Controllers
             }
 
             var token = GenerateJwtToken(user);
-            return Ok(new { Token = token });
+            return Ok(new { token, role = user.Role, id = user.Id });
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<User>> GetUserById(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var userDto = new UserDto
+            {
+                Id = user.Id,
+                Name = user.UserName,
+                Email = user.Email,
+                Role = user.Role
+            };
+
+            return Ok(userDto);
         }
 
         [Authorize(Roles = "AdminRole")]
