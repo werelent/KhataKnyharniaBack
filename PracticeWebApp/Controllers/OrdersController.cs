@@ -35,6 +35,43 @@ namespace PracticeWebApp.Controllers
             return Ok(order);
         }
 
+        [HttpGet("history")]
+        public async Task<ActionResult<IEnumerable<OrderHistoryDTO>>> GetUserOrderHistory([FromQuery] string email)
+        {
+            var userOrders = await _context.Orders
+                .Where(o => o.Email == email)
+                .ToListAsync();
+
+            var orderHistoryDTOs = new List<OrderHistoryDTO>();
+
+            foreach (var order in userOrders)
+            {
+                var orderHistoryDTO = new OrderHistoryDTO
+                {
+                    Id = order.Id,
+                    OrderDate = order.OrderDate,
+                    TotalPrice = order.TotalPrice,
+                    Name = order.Name,
+                    Email = order.Email,
+                    Address = order.Address,
+                    BookInfo = new Dictionary<string, int>()
+                };
+
+                foreach (var bookQuantity in order.BookQuantities)
+                {
+                    var book = await _context.Books.FindAsync(bookQuantity.Key);
+                    if (book != null)
+                    {
+                        orderHistoryDTO.BookInfo.Add(book.Title, bookQuantity.Value);
+                    }
+                }
+
+                orderHistoryDTOs.Add(orderHistoryDTO);
+            }
+
+            return Ok(orderHistoryDTOs);
+        }
+
         [HttpPost]
         public async Task<ActionResult<Order>> CreateOrder(Order order)
         {

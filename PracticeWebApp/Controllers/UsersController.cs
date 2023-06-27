@@ -82,7 +82,7 @@ namespace PracticeWebApp.Controllers
             }
 
             var token = GenerateJwtToken(user);
-            return Ok(new { token, role = user.Role, id = user.Id });
+            return Ok(new { token, role = user.Role, id = user.Id, email = user.Email });
         }
 
         [HttpGet("{id}")]
