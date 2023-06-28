@@ -20,7 +20,17 @@ namespace PracticeWebApp.Models
         public string BookQuantitiesJson
         {
             get => JsonSerializer.Serialize(BookQuantities);
-            set => BookQuantities = JsonSerializer.Deserialize<Dictionary<int, int>>(value);
+            set
+            {
+                try
+                {
+                    BookQuantities = JsonSerializer.Deserialize<Dictionary<int, int>>(value);
+                }
+                catch (JsonException)
+                {
+                    BookQuantities = new Dictionary<int, int>();
+                }
+            }
         }
 
         [NotMapped] // Exclude from database schema creation
