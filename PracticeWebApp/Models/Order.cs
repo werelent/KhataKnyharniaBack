@@ -39,5 +39,8 @@ namespace PracticeWebApp.Models
 
         [Required]
         public string Address { get; set; }
+
+        [Required]
+        public string Status { get; set; }
     }
 }

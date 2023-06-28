@@ -54,6 +54,7 @@ namespace PracticeWebApp.Controllers
                     Name = order.Name,
                     Email = order.Email,
                     Address = order.Address,
+                    Status = order.Status,
                     BookInfo = new Dictionary<string, int>()
                 };
 
