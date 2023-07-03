@@ -73,5 +73,23 @@ namespace PracticeWebApp.Controllers
 
             return NoContent();
         }
+        [HttpPut("updateQuantities")]
+        public async Task<IActionResult> UpdateQuantities(Dictionary<int, int> bookQuantities)
+        {
+            var bookIds = bookQuantities.Keys;
+            var booksToUpdate = await _context.Books.Where(b => bookIds.Contains(b.Id)).ToListAsync();
+
+            foreach (var book in booksToUpdate)
+            {
+                if (bookQuantities.TryGetValue(book.Id, out int quantity))
+                {
+                    book.Quantity -= quantity;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
     }
 }
